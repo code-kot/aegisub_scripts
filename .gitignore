@@ -1,0 +1,6 @@
+# Ignore all Lua and MoonScript files
+*.lua
+*.moon
+# But do not ignore my files
+!my.*.lua
+!my.*.moon
