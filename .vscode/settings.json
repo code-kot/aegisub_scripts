@@ -1,0 +1,10 @@
+{
+    "Lua.diagnostics.globals": [
+        "karaskel",
+        "aegisub"
+    ],
+    "Lua.workspace.library": [
+        "${addons}/lldebugger/module/library"
+    ],
+    "Lua.workspace.checkThirdParty": false
+}
