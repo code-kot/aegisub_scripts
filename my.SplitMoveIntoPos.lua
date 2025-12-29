@@ -27,7 +27,7 @@ function split_move_into_pos(subs, sel)
     local dialog_config = {
         {x = 0, y = 0, class = "label", label = "Enter the number of frames per segment:"},
         {x = 0, y = 1, class = "intedit", name = "frames_per_segment", value = 3, min = 1},
-        {x = 0, y = 2, class = "checkbox", name = "delete_original", label = "Delete original line", value = false},
+        {x = 0, y = 2, class = "checkbox", name = "delete_original", label = "Delete original line (will be commented if not selected)", value = false},
     }
 
     local pressed, results = aegisub.dialog.display(dialog_config, {"OK", "Cancel"})
@@ -45,25 +45,43 @@ function split_move_into_pos(subs, sel)
 
         aegisub.debug.out("Processing line %d: %s\n", line_number, line.text)
 
+        aegisub.debug.out("class: %s\n", line.class)
+        aegisub.debug.out("duration: %s\n", line.duration)
+        aegisub.debug.out("end_time: %s\n", line.end_time)
+        aegisub.debug.out("start_time: %s\n", line.start_time)
+        aegisub.debug.out("text: %s\n", line.text)
+
         -- Extract \move parameters: {\move(x1,y1,x2,y2,t1,t2)}
         -- { .... \move(826.929,613.5,933,334.5,2,526) .... }
+        -- move_params has only move params string "826.929,613.5,933,334.5,2,526"
         local text = line.text
         local move_params = text:match("\\move%(([^)]+)%)")
         if not move_params then
-            aegisub.debug.out("No \\move tag found, skipping line %d\n", line_number)
+            aegisub.debug.out("No '\\move' tag found, skipping line %d\n", line_number)
             goto continue
         end
 
-        aegisub.debug.out("Found \\move parameters: %s\n", move_params)
+        aegisub.debug.out("Found '\\move' parameters: %s\n", move_params)
 
-        -- \move(826.929,613.5,933,334.5,2,526)
-        local x1, y1, x2, y2, t1, t2 = move_params:match("([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^)]+)")
+        -- get numbers from the string of params delimited by comma "826.929,613.5,933,334.5,2,526"
+        local numbers = {}
+        for num in move_params:gmatch("[%d\\.]+") do
+            aegisub.debug.out("%s\n", num)
+            table.insert(numbers, num)
+        end
+
+        local x1, y1, x2, y2, t1, t2 = table.unpack(numbers)
+
+        aegisub.debug.out("Found '\\move' numbers: %s; %s; %s; %s; %s; %s\n", x1, y1, x2, y2, t1, t2)
+
         x1 = tonumber(x1)
         y1 = tonumber(y1)
         x2 = tonumber(x2)
         y2 = tonumber(y2)
         t1 = tonumber(t1) or 0
-        t2 = tonumber(t2) or line.duration
+        t2 = tonumber(t2) or line.duration or line.end_time - line.start_time
+
+        aegisub.debug.out("Found '\\move' start at: %d ms; and duration is: %d ms\n", t1, t2)
 
         -- Calculate total movement
         local dx = x2 - x1
@@ -72,7 +90,7 @@ function split_move_into_pos(subs, sel)
         local movement_end_frame = aegisub.frame_from_ms(line.start_time + t2)
         aegisub.debug.out("line_start_frame: %d, line_end_frame: %d\n", movement_start_frame, movement_end_frame)
 
-        local total_frames = movement_end_frame - movement_start_frame + 1
+        local total_frames = movement_end_frame - movement_start_frame
         aegisub.debug.out("total_frames: %d\n", total_frames)
 
         local num_segments = math.floor(total_frames / frames_per_segment)
@@ -135,6 +153,9 @@ function split_move_into_pos(subs, sel)
         -- Delete the original line if requested
         if delete_original then
             subs:delete(line_number)
+        else
+            line.comment = true
+            subs[line_number] = line
         end
 
         ::continue::
