@@ -3,7 +3,7 @@
 script_name = "Split '\\move' into '\\pos' (custom steps)"
 script_description = "Splits a /move line into multiple /pos lines, one per N-frame segment."
 script_author = "Le Chat"
-script_version = "1.1"
+script_version = "1.1.0"
 
 -- Required for dialog
 local haveDepCtrl, DependencyControl, depctrl = pcall(require, "l0.DependencyControl")
